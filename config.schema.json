@@ -1,0 +1,28 @@
+{
+  "pluginAlias": "homebride-freedompro",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "required": true,
+        "default": "homebridge-freedompro"
+      },
+      "apiKey": {
+        "title": "Api Key",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      "homeApiKey": {
+        "title" :"Home API Key",
+        "type": "string",
+        "required": true,
+        "default": ""
+      }
+    }
+  }
+}
