@@ -1,4 +1,3 @@
-import { API } from 'homebridge';
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 
 import { FreeDomProHomebridgePlatform } from './platform';
@@ -21,8 +20,6 @@ export class LightBulbAccessory {
   ) {
 
     this.uid = accessory.context.deviceUid + '*' + accessory.context.device.uid;
-
-    console.log(this.uid);
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -57,7 +54,7 @@ export class LightBulbAccessory {
   async setOn(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
 
-    const { data: response } = await axios.put(`https://api.freedompro.eu/api/freedompro/accessories/${this.uid}/state`,
+    await axios.put(`https://api.freedompro.eu/api/freedompro/accessories/${this.uid}/state`,
       {on: value as boolean}, {
         headers: { 'Authorization': `Bearer ${this.platform.config.apiKey}` },
       });

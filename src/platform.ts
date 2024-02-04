@@ -11,7 +11,6 @@ import {
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { LightBulbAccessory } from './lightBulb';
 import axios from 'axios';
-import { access } from 'fs';
 
 /**
  * HomebridgePlatform
@@ -112,7 +111,7 @@ export class FreeDomProHomebridgePlatform implements DynamicPlatformPlugin {
       this.log.info('payload', payload.payload);
 
       if (payload.intent === 'REPORT_STATE') {
-        const { uid, device, props} = payload.payload;
+        const { uid, props} = payload.payload;
         const uuid = this.api.hap.uuid.generate(uid);
         const accessory = this.accessories.find(
           (accessory) => accessory.UUID === uuid,
