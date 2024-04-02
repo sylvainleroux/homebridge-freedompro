@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "homebride-freedompro",
+  "pluginAlias": "homebridge-freedompro",
   "pluginType": "platform",
   "singular": true,
   "schema": {
@@ -18,7 +18,7 @@
         "default": ""
       },
       "homeApiKey": {
-        "title" :"Home API Key",
+        "title": "Home API Key",
         "type": "string",
         "required": true,
         "default": ""

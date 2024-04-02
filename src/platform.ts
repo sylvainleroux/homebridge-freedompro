@@ -120,39 +120,47 @@ export class FreeDomProHomebridgePlatform implements DynamicPlatformPlugin {
       }
     };
 
-    const connectToStream = async () => {
-      const response = await axios({
-        method: 'get',
-        url: 'https://home.freedompro.eu/api/v2/events',
-        responseType: 'stream',
-        headers: {
-          Authorization: `Bearer ${this.config.homeApiKey}`,
-        },
-      });
+    const exponentialDelay = (retries) => Math.min(1000 * 2 ** retries, 30000);
 
-      const stream = response.data;
+    const connectToStream = async (retryCount = 0) => {
+      try {
+        const response = await axios({
+          method: 'get',
+          url: 'https://home.freedompro.eu/api/v2/events',
+          responseType: 'stream',
+          headers: {
+            Authorization: `Bearer ${this.config.homeApiKey}`,
+          },
+        });
 
-      stream.on('data', (data) => {
-        try {
-          const str = data.toString('utf-8').substring(5).trim();
-          processStream(JSON.parse(str));
-        } catch (e) {
-          this.log.error(e as string);
-        }
-      });
+        const stream = response.data;
+        stream.on('data', (data) => {
+          try {
+            const str = data.toString('utf-8').substring(5).trim();
+            processStream(JSON.parse(str));
+          } catch (e) {
+            this.log.error(e as string);
+          }
+        });
 
-      stream.on('end', () => {
-        this.log.warn('stream done');
-        setTimeout(()=>{
-          connectToStream();
-        }, 10);
-      });
+        stream.on('end', () => {
+          this.log.warn('Stream ended. Attempting to reconnect...');
+          setTimeout(() => {
+            connectToStream();
+          }, exponentialDelay(retryCount));
+        });
+
+        // Reset retry count upon successful connection
+        retryCount = 0;
+      } catch (e) {
+        this.log.error('Error connecting to stream:', e);
+        setTimeout(() => {
+          connectToStream(++retryCount);
+        }, exponentialDelay(retryCount));
+      }
     };
 
     connectToStream();
-
-
-
 
   }
 }
