@@ -16,7 +16,7 @@ export class LightBulbAccessory {
     private readonly platform: FreeDomProHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
   ) {
-    this.uid = accessory.context.deviceUid + '*' + accessory.context.device.uid;
+    this.uid = accessory.context.device.uid;
 
     // set accessory information
     this.accessory
@@ -49,8 +49,6 @@ export class LightBulbAccessory {
       .getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.setOn.bind(this)) // SET - bind to the `setOn` method below
       .onGet(this.getOn.bind(this)); // GET - bind to the `getOn` method below
-
-    this.startDeviceStatePooling();
   }
 
   /**
@@ -67,6 +65,7 @@ export class LightBulbAccessory {
         headers: { Authorization: `Bearer ${this.platform.config.apiKey}` },
       },
     );
+    this.service.getCharacteristic(this.platform.Characteristic.On).updateValue(value);
     this.isOn = value as boolean; // Update cached state
     this.platform.log.debug('Set Characteristic On ->', value);
   }
@@ -88,28 +87,5 @@ export class LightBulbAccessory {
     return this.isOn;
   }
 
-  startDeviceStatePooling() {
-    const pollInterval = 60000;
-    setInterval(async () => {
-      try {
-        const { data: state } = await axios.get(
-          `https://api.freedompro.eu/api/freedompro/accessories/${this.uid}/state`,
-          {
-            headers: { Authorization: `Bearer ${this.platform.config.apiKey}` },
-          },
-        );
-        this.isOn = state.state.on; // Update the cached state
 
-        // Use updateCharacteristic to inform HomeKit of state change
-        this.service.updateCharacteristic(
-          this.platform.Characteristic.On,
-          this.isOn,
-        );
-
-        this.platform.log.debug('Updated Characteristic On ->', this.isOn);
-      } catch (error) {
-        this.platform.log.error('Failed to poll device state:', error);
-      }
-    }, pollInterval);
-  }
 }

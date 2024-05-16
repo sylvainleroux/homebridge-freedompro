@@ -3,7 +3,7 @@
   "displayName": "Homebridge Freedompro",
   "name": "homebridge-freedompro",
   "version": "1.0.1",
-  "description": "A short description about what your plugin does.",
+  "description": "Add hombridge support for Freedompro devices",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
     "url": "https://github.com/sylvainleroux/homebridge-freedompro.git"
   },
   "engines": {
-    "node": "^18.17.0 || ^20.9.0",
+    "node": "^18.17.0 || ^20.13.1",
     "homebridge": "^1.6.0"
   },
   "main": "dist/index.js",

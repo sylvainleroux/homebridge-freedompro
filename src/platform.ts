@@ -64,103 +64,68 @@ export class FreeDomProHomebridgePlatform implements DynamicPlatformPlugin {
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   async discoverDevices() {
-    const { data: devices } = await axios.get(
-      'https://home.freedompro.eu/api/v2/devices/',
+    const { data: accessories } = await axios.get(
+      'https://api.freedompro.eu/api/freedompro/accessories',
       {
-        headers: { Authorization: `Bearer ${this.config.homeApiKey}` },
+        headers: { Authorization: `Bearer ${this.config.apiKey}` },
       },
     );
 
-    for (const device of devices) {
-      const { manufacturer, model, serialNumber, uid, home } = device;
-      this.log.info(
-        `Discovering devices for ${manufacturer} ${model} ${serialNumber} ${uid}`,
+    //console.log('accessories', accessories);
+
+    for (const acc of accessories) {
+      const uuid = this.api.hap.uuid.generate(acc.uid);
+      const existingAccessory = this.accessories.find(
+        (accessory) => accessory.UUID === uuid,
       );
 
-      for (const acc of device.accessories) {
-        const uuid = this.api.hap.uuid.generate(acc.uid);
+      if (existingAccessory) {
+        this.log.info(
+          'Restoring existing accessory from cache:',
+          existingAccessory.displayName,
+        );
+        new LightBulbAccessory(this, existingAccessory);
+        this.api.updatePlatformAccessories([existingAccessory]);
+      } else {
+        this.log.info('Adding new accessory:', acc.name, ' ', acc.uid);
+        const accessory = new this.api.platformAccessory(acc.name, uuid);
+        accessory.context.device = acc;
+        accessory.context.manufacturer = 'Freedompro';
+        accessory.context.model = 'LightSwitch';
+        accessory.context.serialNumber = '-';
+        accessory.context.home = '-';
+        accessory.context.deviceUid = acc.uid;
+        new LightBulbAccessory(this, accessory);
+        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
+          accessory,
+        ]);
+      }
+    }
+
+    // Retrieve accessory state every 5s
+
+    setInterval(async () => {
+      const { data: props } = await axios.get(
+        'https://api.freedompro.eu/api/freedompro/accessories/state',
+        {
+          headers: { Authorization: `Bearer ${this.config.apiKey}` },
+        },
+      );
+
+      for (const accessory of props) {
+        const uuid = this.api.hap.uuid.generate(accessory.uid);
         const existingAccessory = this.accessories.find(
           (accessory) => accessory.UUID === uuid,
         );
 
-        if (existingAccessory) {
-          this.log.info(
-            'Restoring existing accessory from cache:',
-            existingAccessory.displayName,
+        existingAccessory
+          ?.getService(this.Service.Lightbulb)
+          ?.updateCharacteristic(
+            this.Characteristic.On,
+            accessory.state.on as boolean,
           );
-          new LightBulbAccessory(this, existingAccessory);
-          this.api.updatePlatformAccessories([existingAccessory]);
-        } else {
-          this.log.info('Adding new accessory:', acc.name, ' ', acc.uid);
-          const accessory = new this.api.platformAccessory(acc.name, uuid);
-          accessory.context.device = acc;
-          accessory.context.manufacturer = manufacturer;
-          accessory.context.model = model;
-          accessory.context.serialNumber = serialNumber;
-          accessory.context.home = home;
-          accessory.context.deviceUid = uid;
-          new LightBulbAccessory(this, accessory);
-          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
-            accessory,
-          ]);
-        }
       }
-    }
-
-    const processStream = async (payload) => {
-      this.log.info('payload', payload.payload);
-
-      if (payload.intent === 'REPORT_STATE') {
-        const { uid, props} = payload.payload;
-        const uuid = this.api.hap.uuid.generate(uid);
-        const accessory = this.accessories.find(
-          (accessory) => accessory.UUID === uuid,
-        );
-        accessory?.getService(this.Service.Lightbulb)?.updateCharacteristic(this.Characteristic.On, props.on.value as boolean);
-      }
-    };
-
-    const exponentialDelay = (retries) => Math.min(1000 * 2 ** retries, 30000);
-
-    const connectToStream = async (retryCount = 0) => {
-      try {
-        const response = await axios({
-          method: 'get',
-          url: 'https://home.freedompro.eu/api/v2/events',
-          responseType: 'stream',
-          headers: {
-            Authorization: `Bearer ${this.config.homeApiKey}`,
-          },
-        });
-
-        const stream = response.data;
-        stream.on('data', (data) => {
-          try {
-            const str = data.toString('utf-8').substring(5).trim();
-            processStream(JSON.parse(str));
-          } catch (e) {
-            this.log.error(e as string);
-          }
-        });
-
-        stream.on('end', () => {
-          this.log.warn('Stream ended. Attempting to reconnect...');
-          setTimeout(() => {
-            connectToStream();
-          }, exponentialDelay(retryCount));
-        });
-
-        // Reset retry count upon successful connection
-        retryCount = 0;
-      } catch (e) {
-        this.log.error('Error connecting to stream:', e);
-        setTimeout(() => {
-          connectToStream(++retryCount);
-        }, exponentialDelay(retryCount));
-      }
-    };
-
-    connectToStream();
-
+    }, 5000);
   }
+
 }

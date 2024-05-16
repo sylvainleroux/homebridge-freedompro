@@ -16,12 +16,6 @@
         "type": "string",
         "required": true,
         "default": ""
-      },
-      "homeApiKey": {
-        "title": "Home API Key",
-        "type": "string",
-        "required": true,
-        "default": ""
       }
     }
   }
